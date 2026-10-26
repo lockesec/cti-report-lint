@@ -1,0 +1,14 @@
+# For the pre-commit framework (https://pre-commit.com): copy this block into
+# your repository's .pre-commit-config.yaml. cti-report-lint must be installed
+# in the environment that runs pre-commit (from a clone: pip install .).
+#
+# `check` takes one report, so the entry loops over the file names pre-commit
+# passes in, and fails if any report is blocked (1) or not evaluable (2).
+repos:
+  - repo: local
+    hooks:
+      - id: cti-report-lint
+        name: cti-report-lint check
+        entry: sh -c 'rc=0; for f in "$@"; do cti-report-lint check "$f" || rc=1; done; exit $rc' --
+        language: system
+        files: ^reports/.*\.md$
