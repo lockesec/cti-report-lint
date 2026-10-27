@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cti-report-lint"
+version = "0.1.0"
+description = "Check that incident and threat-intelligence reports claim only what their evidence supports, and redact personal data reversibly"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=5.1"]
+keywords = ["threat-intelligence", "cti", "incident-response", "icd-203", "linter", "redaction"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Intended Audience :: Information Technology",
+    "Environment :: Console",
+    "Operating System :: POSIX",
+    "Development Status :: 4 - Beta",
+]
+
+[project.urls]
+Homepage = "https://github.com/lockesec/cti-report-lint"
+Source = "https://github.com/lockesec/cti-report-lint"
+Issues = "https://github.com/lockesec/cti-report-lint/issues"
+Changelog = "https://github.com/lockesec/cti-report-lint/blob/main/CHANGELOG.md"
+
+[project.scripts]
+cti-report-lint = "cti_report_lint.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
