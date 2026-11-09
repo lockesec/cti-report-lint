@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# A plain git pre-commit hook: lint every staged Markdown report under reports/.
+# Install: cp examples/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+# Exit 1 (blocked) and exit 2 (not evaluable) both stop the commit. Add
+# --findings-required-from YYYY-MM-DD if you are adopting the tool on an
+# existing archive of reports.
+#
+# File names are read NUL-delimited, so spaces and newlines in a name are safe
+# (a $(...) loop would split them into several bogus paths).
+status=0
+while IFS= read -r -d '' f; do
+    cti-report-lint check "$f" || status=1
+done < <(git diff --cached --name-only -z --diff-filter=ACM -- 'reports/*.md')
+exit $status
