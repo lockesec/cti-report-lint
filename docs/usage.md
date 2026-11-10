@@ -14,7 +14,7 @@ cti-report-lint restore report.redacted.md --map report.map.json -o report.md
 
 ## Installing
 
-Python 3.9+, one runtime dependency (PyYAML). On a system Python marked "externally managed" (PEP 668), `pip install` refuses outside a virtual environment: run `python3 -m venv .venv && . .venv/bin/activate` first, or use `pipx install .`.
+Python 3.11+, one runtime dependency (PyYAML). On a system Python marked "externally managed" (PEP 668), `pip install` refuses outside a virtual environment: run `python3 -m venv .venv && . .venv/bin/activate` first, or use `pipx install .`.
 
 `check` options:
 
@@ -22,7 +22,7 @@ Python 3.9+, one runtime dependency (PyYAML). On a system Python marked "externa
 |---|---|---|
 | `--min-5w1h N` | 4 | How many of who/what/when/where/why/how the body must answer |
 | `--findings-required-from DATE` | off | Adoption ratchet, see below |
-| `--json` | | Machine-readable result on stdout |
+| `--json` | | Machine-readable result on stdout; `verified_ok` is `true` exactly when the report passes (exit 0), and `issues` lists what blocked it |
 | `--attack-json FILE` | off | MITRE ATT&CK STIX bundle; checks technique ids |
 | `--kev-json FILE` | off | CISA KEV catalog; checks exploited-in-the-wild claims |
 | `--require-references` | off | Exit 2 unless both files above are given |

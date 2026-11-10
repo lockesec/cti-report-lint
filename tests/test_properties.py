@@ -499,11 +499,18 @@ def test_single_terms_are_not_a_hedge(s):
     assert lint(s) == []
 
 
-@pytest.mark.parametrize("word", ["we assess", "confidence", "confident", "sure", "probability"])
+@pytest.mark.parametrize("word", ["we assess", "confidence", "confident", "probability"])
 @pytest.mark.parametrize("pct", [1, 5, 20, 50, 70, 95, 99])
 def test_bare_percentage_in_a_judgment_sentence_is_flagged(word, pct):
     assert lint("Our %s is that it recurs at %d%%." % (word, pct))
     assert lint("Our %s is that it recurs at %d percent." % (word, pct))
+
+
+@pytest.mark.parametrize("template", ["We are %d%% sure it recurs.", "I am %d percent certain it recurs.",
+                                      "It recurs; we're about %d%% sure."])
+@pytest.mark.parametrize("pct", [1, 50, 99])
+def test_being_n_percent_sure_is_a_judgment(template, pct):
+    assert lint(template % pct)
 
 
 @given(st.integers(1, 99), st.sampled_from(WORDS))

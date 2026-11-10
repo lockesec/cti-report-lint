@@ -121,6 +121,9 @@ def _misspelled_keys(fm: dict) -> list[str]:
         if not isinstance(k, str) or k in _READ_KEYS:
             continue
         want = _SPELLINGS.get(re.sub(r"[\s_-]+", "", k).lower())
+        if want == "sources" and k.lower() == "source" and not (
+                isinstance(fm[k], list) and fm[k] and all(isinstance(x, dict) for x in fm[k])):
+            continue        # `source: vendor blog` is ordinary frontmatter, not a sources block
         if want:
             out.append(f"frontmatter: key {k!r} is not read; the key is {want!r} "
                        f"(exact spelling, lower case), so what it holds was NOT checked")
@@ -385,7 +388,7 @@ def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
         if obj.is_open():
             conflicts_blocking = True
             issues.append(f"conflicts[{i}]: OPEN {obj.severity} "
-                          f"{obj.ctype} on '{obj.subject}' — blocks VERIFIED")
+                          f"{obj.ctype} on '{obj.subject}' — blocks the report until resolved")
 
     if has_findings and not graded:
         issues.append("findings: none of the declared findings is validly graded; "

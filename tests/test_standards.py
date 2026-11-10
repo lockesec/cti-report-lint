@@ -238,16 +238,25 @@ def test_two_separate_judgments_are_not_a_hedge(text):
     assert not any("hedged" in p for p in A.lint_judgment(text)), text
 
 
-@pytest.mark.parametrize("text", [
-    "likely " * 10000,
-    "likely to " * 7000,
-    "we assess " * 7000 + "90%",
+@pytest.mark.parametrize("unit,n,tail", [
+    ("likely ", 2500, ""),
+    ("likely to ", 1750, ""),
+    ("we assess ", 1750, "90%"),
 ])
-def test_lint_is_linear(text):
+def test_lint_is_linear(unit, n, tail):
+    """Four times the input must cost about four times the time, not sixteen: a ratio test
+    sees a quadratic pattern that a fixed wall-clock bound lets through on a fast machine."""
     import time
-    t0 = time.perf_counter()
-    A.lint_judgment(text)
-    assert time.perf_counter() - t0 < 1.0
+
+    def secs(k):
+        best = float("inf")
+        for _ in range(3):                 # best of three: noise only ever adds time
+            t0 = time.perf_counter()
+            A.lint_judgment(unit * k + tail)
+            best = min(best, time.perf_counter() - t0)
+        return best
+    small, big = secs(n), secs(4 * n)
+    assert big < max(small, 0.005) * 8, (unit, small, big)
 
 
 # ── further standards cases ────────────────────────────────────────────

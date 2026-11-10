@@ -12,14 +12,16 @@ Designed for:
 
 - **A person or an agent writing a report.** It runs offline with no model calls, on its own, in a
   pre-commit hook or in CI.
-- **Evidence declared in the report. The full check needs it.** Plain prose gets only the wording and
-  coverage checks, and a report with no findings is blocked.
-- **Reference files you download, to check ids.** Without the ATT&CK and KEV files those ids are
-  reported NOT CHECKED, and the report can still pass unless you add `--require-references`.
+- **Reports that declare their evidence.** The full check reads graded findings from the
+  report's frontmatter; plain prose gets only the wording and coverage checks, and a report
+  with no findings is blocked.
+- **Reference files you download.** ATT&CK and KEV ids are checked against files you supply;
+  without them those ids are reported NOT CHECKED, and the report can still pass unless you
+  add `--require-references`.
 
 ## Quick start
 
-Python 3.9+, one dependency (PyYAML):
+Python 3.11+, one dependency (PyYAML):
 
     pip install git+https://github.com/lockesec/cti-report-lint
     cti-report-lint check report.md
@@ -36,11 +38,11 @@ $ cti-report-lint check incident-report-before.md
 incident-report-before.md: BLOCKED  (5W1H 2/6, 1 graded finding(s), 1 conflict(s))
   judgment: bare percentage (false precision — use a band term) at line 21: '90%'
   judgment: hedged likelihood range (use ONE term per judgment) at line 21: 'likely to very likely'
-  judgment: 0/100 or absolute language (OSINT cannot establish) at line 22: 'impossible'
+  judgment: 0/100 or absolute language (no evidence supports certainty) at line 22: 'impossible'
   coverage: 5W1H only 2/6 (missing when, where, why, how)
   findings[0]: likelihood 'almost certain' exceeds evidence ceiling 'roughly even chance' (ANECDOTAL/trust2)
   judgment: 'very likely' at line 21 exceeds the strongest evidence ceiling among the declared findings ('roughly even chance')
-  conflicts[0]: OPEN CRITICAL VALUE_MISMATCH on 'initial access vector' — blocks VERIFIED
+  conflicts[0]: OPEN CRITICAL VALUE_MISMATCH on 'initial access vector' — blocks the report until resolved
   NOTE: 2 likelihood term(s) cite no finding, so they were read only against the strongest one (cite as [id], or --require-citations)
   finding[0] ANECDOTAL strength 2.8 likelihood 'almost certain'
 (exit 1)
@@ -59,7 +61,7 @@ The rules come from two published standards. ICD 203 is the US intelligence comm
 
 | Command | What it does |
 |---|---|
-| `check report.md` | Runs six checks, prints each issue with its line number, exits 1 if any fails. `--json` gives the same result as data |
+| `check report.md` | Runs six checks, prints each issue (with its line number where it has one), exits 1 if any fails. `--json` gives the same result as data |
 | `skeleton report.md` | Prints a starter `findings:` block, one finding per judgment, at the weakest grade. Writes nothing |
 | `redact report.md --map m.json -o out.md` | Replaces emails, IP addresses, phone numbers, IBANs, Bitcoin addresses and URLs with numbered placeholders |
 | `restore out.md --map m.json -o back.md` | Puts the originals back byte for byte, or refuses |

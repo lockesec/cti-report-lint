@@ -189,9 +189,13 @@ def _has_absolute(text: str) -> bool:
 #       author's own judgment, which is what this rule exists to stop.
 # A whole-document rule blocks (a), and the only way to clear it would be to
 # reword real data, which is worse than the false positive.
+# Cues name the author judging: "make sure", "certain hosts", "risk assessment" and
+# "an estimated 30%" are ordinary measurement prose and do not count.
 _JUDGMENT_CUE_RE = re.compile(
-    r"\b(we (assess|judge|estimate)|assess(ed|ment|es)?|estimate[sd]?|"
-    r"confidence|confident|sure|certain|probability|likelihood)\b", re.IGNORECASE)
+    r"\b((?:we|I) (?:assess|judge|estimate)[sd]?|(?:we|I) (?:have )?(?:assessed|estimated)|"
+    r"our (?:assessment|estimate)|(?<!risk )(?<!vulnerability )assess(?:ed|es)\b|"
+    r"(?:we are|we're|I am|I'm)\b[^.!?\n]{0,30}?\b(?:sure|certain)|(?:%|percent)\s+(?:sure|certain)|"
+    r"confidence|confident|probability|likelihood)\b", re.IGNORECASE)
 # The document referring to itself ("in this report", "our report") is not a
 # source, so it must not count as attribution.
 _SELF_REFERENCE_RE = re.compile(r"\b(?:(?:this|our|the present)\s+report|we\s+attribute)\b",
@@ -338,7 +342,7 @@ def _sentences(text: str) -> list[str]:
 
 HEDGE = "hedged likelihood range (use ONE term per judgment)"
 BARE_PCT = "bare percentage (false precision — use a band term)"
-ABSOLUTE = "0/100 or absolute language (OSINT cannot establish)"
+ABSOLUTE = "0/100 or absolute language (no evidence supports certainty)"
 _BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+")
 
 

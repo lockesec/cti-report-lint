@@ -4,7 +4,7 @@ evidence grade, open source conflicts, 5W1H coverage), and redact personal data
 reversibly. Runtime dependency: PyYAML, loaded only through a ``SafeLoader`` subclass."""
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .validate import validate_report  # noqa: E402
 

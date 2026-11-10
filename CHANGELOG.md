@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1 (2026-11-09)
+
+- Python 3.11 or newer is required (3.9 and 3.10 are end-of-life). CI tests 3.11 to 3.14 on `ubuntu-latest`.
+- **Author.** The package metadata and NOTICE name the author, locke.
+- **Fewer false blocks.** "Make sure 50%", "certain hosts", "risk assessment" and "an
+  estimated 30%" are no longer read as the author's judgment; "we are 90% sure" still is.
+  A plain `source:` frontmatter key is no longer taken for a misspelt `sources`.
+- **Plainer messages.** An open conflict "blocks the report until resolved"; absolute
+  language is "no evidence supports certainty". `--json`'s `verified_ok` is documented.
+- **Tests.** The linear-time tests compare two input sizes instead of a wall-clock bound.
+
+## 0.1.0 (2026-11-09)
 
 First public release, Apache-2.0. How the tool was hardened: [DESIGN.md](DESIGN.md).
 

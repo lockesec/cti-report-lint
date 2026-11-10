@@ -54,11 +54,10 @@ earlier ones.
 | Overlapping spans and absolutes | Overlapping spans were possible between kinds; they are now resolved per kind and asserted away. Per cent was taken for an attribution; hard-wrapped, negated and curly-apostrophe absolutes; address-literal emails. |
 | Invisible characters and IBANs | Invisible format and bidi characters (soft hyphen, marks, isolates, variation selectors) hid values from redaction; the set is widened and documented. A hyphen-grouped IBAN left its country code in clear. The internal overlap assertion could surface as a traceback; it now exits 2 like the self-check. Windows interface names with spaces or braces and hex-only C++ names are documented as limits. |
 
-Each finding was fixed with a regression test before publication. According to the
-author, every defect that was reproduced was also present in the private original,
-which was fixed in turn; that is the author's statement, not something this
-repository can show. Used on the author's own notes, the strict loader found two with duplicate
-keys that had silently dropped their first values.
+Each finding was fixed with a regression test before publication. I also fixed every
+reproduced defect in the private tool this one came from; this repository cannot show
+that part. Run on my own notes, the strict loader found two with duplicate keys that had
+silently dropped their first values.
 
 ## Deliberate non-goals
 

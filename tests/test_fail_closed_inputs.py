@@ -161,3 +161,41 @@ def test_kev_claim_across_a_decimal_point_is_checked(sentence):
 def test_two_sentences_still_split():
     text = "CVE-2024-12345 was patched. Other bugs are actively exploited in the wild."
     assert I.check(text, None, KEV) == []
+
+
+# ── false positives a reader would hit on day one ───────────────────────
+
+def test_a_plain_source_key_is_not_a_misspelling_of_sources(tmp_path):
+    text = PASSING.replace("date: 2026-09-01\n", "date: 2026-09-01\nsource: vendor blog\n", 1)
+    r = validate_report(_write(tmp_path, text))
+    assert not any("'source'" in i for i in r["issues"]), r["issues"]
+
+
+def test_a_source_key_shaped_like_sources_still_blocks(tmp_path):
+    text = PASSING.replace("date: 2026-09-01\n",
+                           "date: 2026-09-01\nsource:\n  - {id: s1, root: vendor}\n", 1)
+    r = validate_report(_write(tmp_path, text))
+    assert any("'source'" in i and "'sources'" in i for i in r["issues"]), r["issues"]
+
+
+@pytest.mark.parametrize("sentence", [
+    "Make sure 50% of hosts are patched.",
+    "Certain hosts showed 40% CPU.",
+    "The risk assessment covered 80% of servers.",
+    "An estimated 30% of the fleet runs the old agent.",
+])
+def test_ordinary_sentences_with_a_percentage_are_not_judgments(tmp_path, sentence):
+    r = validate_report(_write(tmp_path, PASSING + "\n" + sentence + "\n"))
+    assert not any("bare percentage" in i or "percent" in i.lower() and "judgment" in i
+                   for i in r["issues"]), r["issues"]
+
+
+@pytest.mark.parametrize("sentence", [
+    "We assess with 90% confidence that the actor is GROUP-A.",
+    "We are sure at 80% that this was staged.",
+    "We estimate a 70% chance of reuse.",
+    "The probability of reuse is 60%.",
+])
+def test_judgment_sentences_with_a_percentage_still_block(tmp_path, sentence):
+    r = validate_report(_write(tmp_path, PASSING + "\n" + sentence + "\n"))
+    assert r["verified_ok"] is False, (sentence, r["issues"])
