@@ -44,6 +44,7 @@ LIKELIHOOD_BANDS = [
     ("almost certain", 95, 99),
 ]
 LIKELIHOOD_TERMS = [t for t, _, _ in LIKELIHOOD_BANDS]
+_EVEN = LIKELIHOOD_TERMS.index("roughly even chance")
 
 # The strongest likelihood term a single finding of a given evidence grade may
 # underwrite. Weak evidence caps how far up the ladder a judgment can go,
@@ -57,6 +58,12 @@ LIKELIHOOD_TERMS = [t for t, _, _ in LIKELIHOOD_BANDS]
 # The finding TYPE can only lower the ceiling, never raise it: CONTESTED
 # permits no single judgment, and ANECDOTAL permits at most "roughly even
 # chance". A PRIMARY or CONFIRMED finding does not lift a low trust score.
+#
+# The ceiling is TWO-SIDED. The bands are symmetric about even chance, and "almost no
+# chance X did it" on one forum post is the same overreach as "almost certain X did it":
+# both claim more than the evidence can carry. So a ceiling is a DISTANCE from "roughly
+# even chance", and a term may sit that far out on either side (`floor_for` names the
+# low end). Before 0.2.0 only the high side was read, so any strong negative passed.
 _TRUST_CEILING = {5: "almost certain", 4: "very likely", 3: "likely",
                   2: "roughly even chance"}
 _TYPE_CEILING = {"ANECDOTAL": "roughly even chance"}
@@ -75,6 +82,25 @@ def ceiling_for(finding_type: str, trust_score: int) -> str | None:
     return trust_ceiling
 
 
+def floor_for(finding_type: str, trust_score: int) -> str | None:
+    """The mirror of `ceiling_for` below even chance: the strongest NEGATIVE term the
+    evidence allows ("very unlikely" where the ceiling is "very likely"), or None when it
+    cannot support any single judgment."""
+    ceil = ceiling_for(finding_type, trust_score)
+    return None if ceil is None else mirror(ceil)
+
+
+def mirror(term: str) -> str:
+    """The band the same distance from even chance on the other side."""
+    return LIKELIHOOD_TERMS[2 * _EVEN - LIKELIHOOD_TERMS.index(term)]
+
+
+def strength_of(term: str) -> int:
+    """How far a band sits from "roughly even chance" (0-3), on either side. This, not the
+    position on the ladder, is what an evidence ceiling limits."""
+    return abs(LIKELIHOOD_TERMS.index(term) - _EVEN)
+
+
 def likelihood_term(pct: float) -> str:
     """Map a probability in percent to its band term."""
     if not (0 < pct < 100):
@@ -90,14 +116,15 @@ def _term_rank(term: str) -> int:
 
 
 def exceeds_ceiling(term: str, finding_type: str, trust_score: int) -> bool:
-    """True when a stated likelihood is stronger than the evidence allows."""
+    """True when a stated likelihood is stronger than the evidence allows, in EITHER
+    direction: further from even chance than the ceiling is."""
     if term not in LIKELIHOOD_TERMS:
         # rank -1 read as "below every ceiling", so an unknown term passed
         raise ValueError(f"unknown likelihood term {term!r}")
     ceil = ceiling_for(finding_type, trust_score)
     if ceil is None:
         return True  # no single judgment is defensible: any term overshoots
-    return _term_rank(term) > _term_rank(ceil)
+    return strength_of(term) > strength_of(ceil)
 
 
 # Characters that render as nothing (soft hyphen, zero-width and directional marks, word joiner,
@@ -207,7 +234,8 @@ _ATTRIBUTED_RE = re.compile(
 
 # Band terms as they appear in prose, with ICD 203's synonyms and the common "highly likely".
 # "remote" (ICD 203's synonym for "almost no chance") is left out: in an incident report it
-# almost always means remote access, and a low term can never exceed a ceiling anyway.
+# almost always means remote access. The other low terms ARE read: since the ceiling became
+# two-sided (0.2.0) "very unlikely" over weak evidence overreaches like "very likely" does.
 PROSE_SYNONYMS = {
     "almost no chance": ("almost no chance",),
     "very unlikely": ("very unlikely", "highly improbable"),

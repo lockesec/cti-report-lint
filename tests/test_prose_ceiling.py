@@ -54,8 +54,6 @@ def test_the_issue_names_the_term_and_its_file_line(tmp_path):
 
 @pytest.mark.parametrize("prose", [
     "It is roughly even chance that the actor reuses the loader.",
-    "Reinfection is unlikely.",
-    "There is almost no chance the backup was touched.",
     "Reinfection is not likely.",
     "Attribution isn't likely without more telemetry.",
     'The vendor report says the actor is "almost certain" to return.',
@@ -67,10 +65,28 @@ def test_terms_at_or_below_the_ceiling_negated_or_attributed_are_not_issues(tmp_
     assert not prose_issues(run(tmp_path, prose))
 
 
+@pytest.mark.parametrize("prose, said", [
+    ("Reinfection is unlikely.", "unlikely"),
+    ("There is almost no chance the backup was touched.", "almost no chance"),
+    ("A second intrusion is highly improbable.", "highly improbable"),
+])
+def test_a_strong_negative_in_the_prose_overreaches_like_a_strong_positive(tmp_path, prose, said):
+    """The ceiling is two-sided (0.2.0): on one ANECDOTAL trust-2 finding the evidence carries
+    'roughly even chance' and nothing further out, in either direction."""
+    issues = prose_issues(run(tmp_path, prose))
+    assert len(issues) == 1 and said in issues[0] and "roughly even chance" in issues[0], issues
+
+
+def test_a_negative_inside_what_the_evidence_allows_is_not_an_issue(tmp_path):
+    fm = FM.replace("finding_type: ANECDOTAL\n    trust_score: 2", "finding_type: PRIMARY\n    trust_score: 3")
+    assert not prose_issues(run(tmp_path, "Reinfection is unlikely.", fm))                 # mirror of 'likely'
+    assert prose_issues(run(tmp_path, "Reinfection is very unlikely.", fm))                # one band too far
+
+
 def test_the_strongest_finding_sets_the_ceiling(tmp_path):
     fm = FM.replace("likelihood: roughly even chance", "likelihood: roughly even chance\n"
                     "  - finding_type: PRIMARY\n    trust_score: 4\n    source_reliability: B\n"
-                    "    confirmed_by: [EDR]\n    likelihood: very likely")
+                    "    confirmed_by: [EDR, proxy logs]\n    likelihood: very likely")
     assert not prose_issues(run(tmp_path, "It is very likely the loader is theirs.", fm))
     assert prose_issues(run(tmp_path, "The actor is almost certain to return.", fm))
 

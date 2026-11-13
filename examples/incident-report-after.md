@@ -1,17 +1,21 @@
 ---
 date: 2026-09-21
+sources:
+  - {id: edr, reliability: A}
+  - {id: proxy, reliability: B}
+  - {id: loader-hash, reliability: C}
 findings:
   - id: F1
     finding_type: PRIMARY
     trust_score: 4
     source_reliability: B
-    confirmed_by: [EDR process tree, proxy logs]
+    confirmed_by: [edr, proxy]
     likelihood: very likely
   - id: F2
     finding_type: DERIVED
     trust_score: 3
     source_reliability: C
-    confirmed_by: [shared loader hash]
+    confirmed_by: [loader-hash]
     likelihood: likely
 conflicts:
   - ctype: VALUE_MISMATCH

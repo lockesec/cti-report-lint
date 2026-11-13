@@ -147,7 +147,8 @@ def _needs_evidence(text: str, body: str) -> list[str]:
 
 def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
                     findings_required_from: str | None = None,
-                    attack=None, kev=None, require_citations: bool = False) -> dict:
+                    attack=None, kev=None, require_citations: bool = False,
+                    require_sources: bool = False) -> dict:
     """Run every check on one report and return the result as a dict.
 
     ``findings_required_from`` (YYYY-MM-DD, default None) is a ratchet for
@@ -270,6 +271,7 @@ def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
         issues += src_issues
 
     graded = []
+    unresolved: list = []   # findings at trust >= 4 whose confirmations could not be resolved to roots
     ceilings = []      # each graded finding's evidence ceiling, for the prose check
     by_id: dict = {}   # a finding's `id` -> its ceiling, for a sentence that cites it as [id]
     for i, f in enumerate(raw_findings or []):
@@ -292,6 +294,26 @@ def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
         cited = list(f.get("confirmed_by") or [])
         n_conf = len(cited)
         roots = None
+        if srcs is None:
+            # No `sources:` block: the ids in confirmed_by are CLAIMED, and nothing here can
+            # tell two independent sources from one feed and the blog that repeats it. That
+            # is said (independence NOT CHECKED), never read as a pass - and the count still
+            # binds, or leaving the block out would be the easy way through: before 0.2.0
+            # trust 5 with `confirmed_by: []` passed, and the same claim was blocked once
+            # its sources were declared.
+            claimed = list(dict.fromkeys(c for c in cited if isinstance(c, str) and c.strip()))
+            n_conf = len(claimed)
+            if int(f["trust_score"]) >= 4:
+                unresolved.append(i)
+                if len(claimed) < 2:
+                    issues.append(
+                        f"findings[{i}]: trust {f['trust_score']} needs at least 2 confirming "
+                        f"sources; confirmed_by names {len(claimed)}")
+                elif require_sources:
+                    issues.append(
+                        f"findings[{i}]: trust {f['trust_score']} cites {len(claimed)} source(s) "
+                        f"but the report declares no sources: block, so their independence "
+                        f"cannot be checked (--require-sources)")
         if srcs is not None:
             roots, unknown = source_model.independent(srcs, cited)
             for u in unknown:
@@ -313,10 +335,14 @@ def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
                                         int(f["trust_score"])):
                 ceil = analytic.ceiling_for(f["finding_type"],
                                             int(f["trust_score"]))
+                low = (ceil is not None and analytic.LIKELIHOOD_TERMS.index(f["likelihood"])
+                       < analytic.LIKELIHOOD_TERMS.index("roughly even chance"))
                 issues.append(
                     f"findings[{i}]: likelihood '{f['likelihood']}' exceeds "
-                    f"evidence ceiling '{ceil}' "
-                    f"({f['finding_type']}/trust{f['trust_score']})")
+                    f"evidence ceiling '{analytic.mirror(ceil) if low else ceil or 'no single judgment'}' "
+                    f"({f['finding_type']}/trust{f['trust_score']}"
+                    + (f": no further from even chance than '{ceil}', in either direction)"
+                       if low else ")"))
         graded.append(row)
         ceilings.append(analytic.ceiling_for(f["finding_type"], int(f["trust_score"])))
         fid = f.get("id")
@@ -333,16 +359,21 @@ def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
     # ceiling to read against, and the findings issue above already blocks.
     uncited: list = []
     if graded:
+        # A ceiling limits the DISTANCE from even chance, on either side (see standards.py), so
+        # the prose is read by `strength_of`: "very unlikely" overreaches where "very likely" does.
         ranks = [analytic.LIKELIHOOD_TERMS.index(c) for c in ceilings if c is not None]
         top = max(ranks) if ranks else -1
         top_name = analytic.LIKELIHOOD_TERMS[top] if top >= 0 else "no single judgment"
+
+        def _reach(rank: int) -> int:      # how strong a judgment a ceiling at `rank` allows; -1 = none
+            return analytic.strength_of(analytic.LIKELIHOOD_TERMS[rank]) if rank >= 0 else -1
         worst: dict[int, tuple[int, str, str]] = {}  # line -> strongest offending term, and against what
         cited_by = analytic.citation_index(body)
         for off, said in analytic.confidence_terms(body):
             if not cited_by(off):
                 uncited.append((body_line0 + body.count("\n", 0, off) + 1, said))
         for off, term, said in analytic.prose_terms(body):
-            rank = analytic.LIKELIHOOD_TERMS.index(term)
+            rank = analytic.strength_of(term)
             line = body_line0 + body.count("\n", 0, off) + 1
             cites = cited_by(off)
             for bad in cites:
@@ -357,7 +388,7 @@ def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
                 limit = max(cited_ranks) if cited_ranks else -1
                 name = analytic.LIKELIHOOD_TERMS[limit] if limit >= 0 else "no single judgment"
                 what = f"the ceiling of the finding it cites ('{name}')"
-            if rank > limit and rank > worst.get(line, (-1, "", ""))[0]:
+            if rank > _reach(limit) and rank > worst.get(line, (-1, "", ""))[0]:
                 worst[line] = (rank, said, what)
         for line, (_, said, what) in sorted(worst.items()):
             issues.append(f"judgment: '{said}' at line {line} exceeds {what}")
@@ -412,4 +443,7 @@ def validate_report(path: Path, *, min_5w1h: int = DEFAULT_MIN_5W1H,
         "identifiers": ids_info,
         # band terms in the prose that cite no finding: checked only against the strongest one
         "uncited_judgments": [{"line": line, "said": said} for line, said in uncited],
+        # trust >= 4 findings whose confirmations were counted as CLAIMED, not resolved to
+        # independent roots, because the report declares no sources: block. Not a pass.
+        "independence_not_checked": unresolved,
     }

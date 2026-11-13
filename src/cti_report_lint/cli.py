@@ -113,6 +113,10 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--require-citations", action="store_true",
                    help="block a likelihood term in the prose that cites no finding as [id]; without "
                         "this such a term is read only against the strongest finding, and counted")
+    c.add_argument("--require-sources", action="store_true",
+                   help="block a trust 4-5 finding whose report declares no sources: block; without "
+                        "this its confirmed_by ids are counted as claimed and independence is "
+                        "reported NOT CHECKED")
     c.add_argument("--require-references", action="store_true",
                    help="exit 2 unless both --attack-json and --kev-json are given, so a run "
                         "that could not check identifiers can never read as a pass")
@@ -169,7 +173,8 @@ def _check(args: argparse.Namespace) -> int:
         r = validate.validate_report(
             args.report, min_5w1h=args.min_5w1h,
             findings_required_from=args.findings_required_from,
-            attack=refs.get("attack"), kev=refs.get("kev"), require_citations=args.require_citations)
+            attack=refs.get("attack"), kev=refs.get("kev"), require_citations=args.require_citations,
+            require_sources=args.require_sources)
     except OSError as e:
         print(f"NOT EVALUABLE: cannot read {args.report}: {e}. This is not a "
               "pass and not a block.", file=sys.stderr)
@@ -200,6 +205,10 @@ def _check(args: argparse.Namespace) -> int:
             info = r["identifiers"][key]
             if info["ids"] and not info["checked"]:
                 print(f"  NOTE: {info['ids']} {label} NOT CHECKED (no {flag})")
+        if r["independence_not_checked"] and not args.require_sources:
+            print(f"  NOTE: independence NOT CHECKED for {len(r['independence_not_checked'])} trust 4-5 "
+                  f"finding(s): no sources: block, so confirmed_by ids were counted as claimed, not "
+                  f"resolved to independent sources (declare sources:, or --require-sources)")
         if r["uncited_judgments"] and not args.require_citations:
             print(f"  NOTE: {len(r['uncited_judgments'])} likelihood term(s) cite no finding, so they "
                   f"were read only against the strongest one (cite as [id], or --require-citations)")

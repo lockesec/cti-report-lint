@@ -110,8 +110,21 @@ def run(work, fm, body, name="r.md", **kw):
 
 def finding(ftype="PRIMARY", trust=3, rel="B", **more):
     d = {"finding_type": ftype, "trust_score": trust, "source_reliability": rel}
+    # Trust 4-5 needs two confirming sources even with no sources: block (0.2.0). A test that is
+    # about something else gets them by default; one about the rule passes confirmed_by itself.
+    if isinstance(trust, int) and not isinstance(trust, bool) and trust >= 4 and "confirmed_by" not in more:
+        d["confirmed_by"] = ["src-a", "src-b"]
     d.update(more)
     return d
+
+
+EVEN = BANDS.index("roughly even chance")
+
+
+def too_strong(i, ci):
+    """A band at index i against a ceiling at index ci: the ceiling limits the DISTANCE from
+    even chance on either side, so 'very unlikely' overreaches exactly where 'very likely' does."""
+    return True if ci is None else abs(i - EVEN) > ci - EVEN
 
 
 def cli_run(argv):
@@ -173,8 +186,7 @@ def test_primary_trust_2_is_still_even_chance():
 def test_exceeds_ceiling_both_sides_of_the_limit(ftype, trust):
     ci = ceiling_index(ftype, trust)
     for i, term in enumerate(BANDS):
-        want = True if ci is None else i > ci
-        assert standards.exceeds_ceiling(term, ftype, trust) is want, (term, ftype, trust)
+        assert standards.exceeds_ceiling(term, ftype, trust) is too_strong(i, ci), (term, ftype, trust)
 
 
 @pytest.mark.parametrize("ftype", TYPES)
@@ -182,10 +194,10 @@ def test_exceeds_ceiling_both_sides_of_the_limit(ftype, trust):
 def test_declared_likelihood_blocks_only_above_ceiling(work, ftype, trust):
     ci = ceiling_index(ftype, trust)
     for i, term in enumerate(BANDS):
-        r = run(work, fm_text([finding(ftype, trust, confirmed_by=["x"], likelihood=term)]),
+        r = run(work, fm_text([finding(ftype, trust, confirmed_by=["x", "y"], likelihood=term)]),
                 "A plain statement.\n")
         blocked = not r["verified_ok"]
-        assert blocked == (True if ci is None else i > ci), (ftype, trust, term, r["issues"])
+        assert blocked == too_strong(i, ci), (ftype, trust, term, r["issues"])
 
 
 def test_likelihood_outside_the_seven_terms_blocks_and_is_named(work):
@@ -614,7 +626,7 @@ def test_prose_term_is_held_to_the_strongest_declared_finding(work, ftype, trust
     for i, term in enumerate(BANDS):
         r = prose_blocks(work, [finding(ftype, trust)],
                          "The intrusion is %s linked to the vendor." % term)
-        assert r["verified_ok"] is (False if ci is None else i <= ci), (ftype, trust, term)
+        assert r["verified_ok"] is (not too_strong(i, ci)), (ftype, trust, term)
 
 
 def test_strongest_of_several_findings_sets_the_prose_limit(work):
@@ -647,7 +659,7 @@ def test_citation_holds_a_term_to_the_cited_ceiling(work, cite, ok):
 @pytest.mark.parametrize("term_idx", range(7))
 def test_cited_ceiling_has_a_sharp_edge(work, term_idx):
     r = run(work, fm_text(F2), "The intrusion is %s linked to the vendor. [F2]\n" % BANDS[term_idx])
-    assert r["verified_ok"] is (term_idx <= 3)
+    assert r["verified_ok"] is (term_idx == 3)   # F2 is trust 2: even chance only, on either side
 
 
 @pytest.mark.parametrize("body", [
@@ -1415,3 +1427,64 @@ def test_restore_exit_codes(work):
     assert cli_run(["restore", str(red), "--map", str(mp), "-o", str(red)])[0] == 64
     assert cli_run(["restore", str(red), "--map", str(mp), "-o", str(d / "ok.md")])[0] == 0
     assert (d / "ok.md").read_bytes() == src.read_bytes()
+
+
+# ------------------------------------------------- 0.2.0: the two rules wt2's probes found missing
+@pytest.mark.parametrize("trust", [2, 3, 4])
+def test_ceiling_is_symmetric_about_even_chance(trust):
+    """'almost no chance' on weak evidence is the same overreach as 'almost certain'."""
+    for i, term in enumerate(BANDS):
+        mirror = BANDS[2 * EVEN - i]
+        assert standards.exceeds_ceiling(term, "PRIMARY", trust) is standards.exceeds_ceiling(mirror, "PRIMARY", trust)
+    assert standards.floor_for("PRIMARY", trust) == BANDS[2 * EVEN - BANDS.index(standards.ceiling_for("PRIMARY", trust))]
+
+
+def test_a_strong_negative_on_one_anecdote_blocks_and_names_the_low_side(work):
+    r = run(work, fm_text([finding("ANECDOTAL", 2, rel="D", confirmed_by=[], likelihood="almost no chance")]), "T.\n")
+    assert not r["verified_ok"]
+    assert any("'almost no chance' exceeds evidence ceiling 'roughly even chance'" in i and "either direction" in i
+               for i in r["issues"]), r["issues"]
+    ok = run(work, fm_text([finding("ANECDOTAL", 2, rel="D", confirmed_by=[], likelihood="roughly even chance")]), "T.\n")
+    assert ok["verified_ok"]
+
+
+@pytest.mark.parametrize("trust", [4, 5])
+@pytest.mark.parametrize("cited, blocked", [([], True), (["a"], True), (["a", "a"], True), (["a", ""], True),
+                                            (["a", "b"], False)])
+def test_without_a_sources_block_trust_4_and_5_still_need_two_confirming_sources(work, trust, cited, blocked):
+    """Leaving the sources: block out must not be the easy way through (before 0.2.0 trust 5 with
+    confirmed_by [] passed while the same claim with its sources declared was blocked)."""
+    r = run(work, fm_text([finding("PRIMARY", trust, confirmed_by=cited)]), "T.\n")
+    assert (not r["verified_ok"]) is blocked, r["issues"]
+    assert r["independence_not_checked"] == [0]          # said either way: claimed, never resolved
+    if blocked:
+        assert any("needs at least 2 confirming sources" in i for i in r["issues"])
+
+
+def test_trust_3_and_below_need_no_confirmation_and_are_not_reported_unchecked(work):
+    r = run(work, fm_text([finding("PRIMARY", 3, confirmed_by=[])]), "T.\n")
+    assert r["verified_ok"] and r["independence_not_checked"] == []
+
+
+def test_require_sources_blocks_what_cannot_be_resolved_and_declared_sources_are_resolved(work):
+    claimed = fm_text([finding("PRIMARY", 4, confirmed_by=["blog1", "blog2"])])
+    assert run(work, claimed, "T.\n")["verified_ok"]
+    r = run(work, claimed, "T.\n", require_sources=True)
+    assert not r["verified_ok"] and any("--require-sources" in i for i in r["issues"])
+    s = [{"id": "feed", "reliability": "B"}, {"id": "blog1", "reliability": "C", "derived_from": "feed"},
+         {"id": "blog2", "reliability": "C", "derived_from": "feed"}]
+    circular = run(work, fm_text([finding("PRIMARY", 4, confirmed_by=["blog1", "blog2"])], sources=s), "T.\n",
+                   require_sources=True)
+    assert not circular["verified_ok"] and circular["independence_not_checked"] == []
+    assert any("resolves to 1 independent" in i for i in circular["issues"])
+
+
+def test_the_cli_says_independence_was_not_checked_and_the_flag_blocks(work):
+    d = newdir(work)
+    p = d / "r.md"
+    p.write_text(fm_text([finding("PRIMARY", 4, confirmed_by=["blog1", "blog2"])])
+                 + "Who actor what malware when 2026-01-01 where sector why money how phishing.\n", encoding="utf-8")
+    code, out, _ = cli_run(["check", str(p), "--min-5w1h", "0"])
+    assert code == 0 and "independence NOT CHECKED for 1 trust 4-5 finding(s)" in out
+    code, out, _ = cli_run(["check", str(p), "--min-5w1h", "0", "--require-sources"])
+    assert code == 1 and "NOT CHECKED" not in out and "--require-sources" in out

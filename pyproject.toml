@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cti-report-lint"
-version = "0.1.1"
+version = "0.2.0"
 description = "Check that incident and threat-intelligence reports claim only what their evidence supports, and redact personal data reversibly"
 readme = "README.md"
 license = "Apache-2.0"

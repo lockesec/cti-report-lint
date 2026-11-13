@@ -35,14 +35,16 @@ What the checks do not catch. The README lists the ones that matter most.
   clears when `resolved_by` names who decided, which side won (or neither) and why; the tool
   cannot judge the decision, only require that it is complete and keep both sides on record.
 - **No ceiling is printed where no likelihood is allowed.** For trust 1 and CONTESTED
-  findings no single judgment is permitted, so a finding-level issue shows the ceiling as
-  `None` and a prose issue says 'no single judgment'. (A `likelihood:` value outside the seven band terms is not a limit: it
+  findings no single judgment is permitted, so both the finding-level issue and the prose issue
+  name the ceiling as 'no single judgment'. (A `likelihood:` value outside the seven band terms is not a limit: it
   blocks, with the term named.)
-- **Evidence grades are the author's word.** Without a `sources:` block, `trust_score`,
-  `source_reliability` and `confirmed_by` are not cross-checked against each other (trust 5,
-  reliability F and an empty `confirmed_by` can pass), repeated entries in `confirmed_by` count
-  as repeated confirmations, and a `date:` the author wrote is believed when a ratchet date
-  is set. Declare `sources:` to have corroboration counted by independent root.
+- **Evidence grades are the author's word.** `trust_score` and `source_reliability` are not
+  cross-checked against each other (trust 5 with reliability F passes: trust rates the claim,
+  reliability the source), and a `date:` the author wrote is believed when a ratchet date is
+  set. Without a `sources:` block, trust 4-5 needs two distinct `confirmed_by` entries but they
+  are only counted, not resolved: two blogs repeating one feed pass, with `independence NOT
+  CHECKED` printed. Declare `sources:` to have corroboration counted by independent root, or
+  run with `--require-sources`.
 - **Only some phrasings count as a band term or as exploited in the wild.** The ceiling reads
   the seven ICD 203 terms and their listed synonyms in Latin letters; "certain" alone and
   fullwidth `％` are not read; Cyrillic and Greek look-alike letters are. The KEV check reads a

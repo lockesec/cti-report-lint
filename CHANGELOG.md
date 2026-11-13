@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+Two rules change what blocks. Both were found by running synthetic probe reports against 0.1.1.
+
+- **The ceiling is two-sided.** It limited only how HIGH a likelihood term could go, so "almost
+  no chance" on one trust-2 anecdote passed where "almost certain" blocked. The bands are
+  symmetric about even chance, and the ceiling now limits the distance from it in either
+  direction, in a finding's `likelihood:` and in the prose ("unlikely", "highly improbable"
+  and the other low terms are read; "remote" still is not). A report that states a strong
+  negative over weak evidence now blocks.
+- **Trust 4-5 needs two confirming sources, with or without a `sources:` block.** Before, the
+  rule bound only a report that declared its sources: trust 5 with `confirmed_by: []` passed,
+  and the same claim was blocked once its sources were written down. Without the block the
+  entries are counted as claimed (distinct, non-empty) and the report says `independence NOT
+  CHECKED` (`independence_not_checked` in `--json`). New flag `--require-sources` blocks that
+  case instead.
+- A finding-level ceiling issue for trust 1 or CONTESTED names 'no single judgment' instead
+  of `None`.
+- The "after" example declares its sources.
+
 ## 0.1.1 (2026-11-09)
 
 - Python 3.11 or newer is required (3.9 and 3.10 are end-of-life). CI tests 3.11 to 3.14 on `ubuntu-latest`.

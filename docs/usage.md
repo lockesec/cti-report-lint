@@ -27,6 +27,7 @@ Python 3.11+, one runtime dependency (PyYAML). On a system Python marked "extern
 | `--kev-json FILE` | off | CISA KEV catalog; checks exploited-in-the-wild claims |
 | `--require-references` | off | Exit 2 unless both files above are given |
 | `--require-citations` | off | Block a likelihood term in the prose that cites no finding as `[id]` |
+| `--require-sources` | off | Block a trust 4-5 finding in a report with no `sources:` block (without it, independence is reported NOT CHECKED) |
 
 ## Declaring evidence
 
@@ -68,7 +69,7 @@ count once, so a blog restating a feed is not a second confirmation. With `sourc
 `confirmed_by` entry must be a declared id, trust 4 or 5 needs at least two independent
 sources, the confirmation bonus in the strength score uses the independent count, and an
 unknown `derived_from` or a cycle blocks. The tool never grades a source; it checks that what
-you declared is consistent. Without `sources:`, `confirmed_by` stays free text. It is optional today: a finding with no `confirmed_by` key passes the field check.
+you declared is consistent. Without `sources:`, `confirmed_by` stays free text: a trust 4 or 5 finding still needs two distinct entries, they are counted as claimed, and the report prints `independence NOT CHECKED` (JSON: `independence_not_checked`), because nothing can tell two sources from one feed and the blog repeating it. `--require-sources` blocks that case. At trust 3 and below `confirmed_by` is optional.
 
 **Technique and CVE ids.** Nothing is bundled: a stale copy would read as current. Download the
 references you want checked and pass them:

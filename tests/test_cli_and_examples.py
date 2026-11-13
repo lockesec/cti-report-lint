@@ -21,7 +21,7 @@ EXAMPLES = ROOT / "examples"
 PASSING = """---
 date: 2026-09-01
 findings:
-  - {finding_type: PRIMARY, trust_score: 5, source_reliability: A, confirmed_by: []}
+  - {finding_type: PRIMARY, trust_score: 5, source_reliability: A, confirmed_by: [EDR telemetry, vendor advisory]}
 ---
 The tracked actor (who) deployed a ransomware payload (what) first seen
 2026-02 (when) against the finance sector (where) for financial motivation
@@ -341,7 +341,7 @@ def test_check_readme_passes_on_the_real_readme_and_fails_on_a_drifted_one(tmp_p
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     block = "\n".join(cr.readme_block(readme))
     assert "finding[1] DERIVED" in block
-    drifted = readme.replace("  finding[1] DERIVED strength 5.7 likelihood 'likely'\n", "")
+    drifted = readme.replace("  finding[1] DERIVED strength 5.7 likelihood 'likely', 1 independent source(s)\n", "")
     assert drifted != readme
     assert cr.mismatches(cr.readme_block(drifted), _demo_output(env))[1]
 

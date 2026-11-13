@@ -16,7 +16,7 @@ findings:
   - finding_type: PRIMARY
     trust_score: 5
     source_reliability: A
-    confirmed_by: []
+    confirmed_by: [EDR telemetry, vendor advisory]
     likelihood: almost certain
 ---
 The tracked actor (who) deployed a Rust ransomware payload (what) first seen
@@ -49,7 +49,9 @@ def test_clean_report_passes(tmp_path):
     r = validate_report(_write(tmp_path, CLEAN))
     assert r["verified_ok"] is True, r["issues"]
     assert r["coverage_5w1h"] == 6
-    assert r["findings_graded"][0]["strength"] == pytest.approx(9.0)
+    # PRIMARY base + trust 5 + two confirmations reaches the cap (9.0 with none, before trust 5
+    # needed two confirming sources)
+    assert r["findings_graded"][0]["strength"] == pytest.approx(10.0)
 
 
 def test_bare_percentage_blocks(tmp_path):
@@ -130,7 +132,7 @@ conflicts:
 def test_partial_grade_finding_blocks(tmp_path):
     bad = CLEAN.replace(
         "finding_type: PRIMARY\n    trust_score: 5\n    source_reliability: A\n"
-        "    confirmed_by: []\n    likelihood: almost certain",
+        "    confirmed_by: [EDR telemetry, vendor advisory]\n    likelihood: almost certain",
         "finding_type: PRIMARY")
     r = validate_report(_write(tmp_path, bad))
     assert r["verified_ok"] is False
@@ -210,7 +212,7 @@ def test_cutoff_boundary_is_inclusive(tmp_path, boundary, expect_blocked):
 _INTACT = """---
 title: Control report
 findings:
-  - {finding_type: PRIMARY, trust_score: 5, source_reliability: A, confirmed_by: []}
+  - {finding_type: PRIMARY, trust_score: 5, source_reliability: A, confirmed_by: [EDR telemetry, vendor advisory]}
 conflicts:
   - ctype: VALUE_MISMATCH
     subject: "GROUP-A first-seen date"
@@ -370,7 +372,7 @@ findings:
   - finding_type: PRIMARY
     trust_score: 5
     source_reliability: A
-    confirmed_by: []
+    confirmed_by: [EDR telemetry, vendor advisory]
 conflicts:
   - ctype: VALUE_MISMATCH
     subject: vector

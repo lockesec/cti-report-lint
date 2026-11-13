@@ -28,6 +28,17 @@ judgment. The finding type can only lower it: ANECDOTAL tops out at roughly even
 chance, and CONTESTED permits no single judgment at all. A PRIMARY finding with trust
 2 is still capped at roughly even chance.
 
+The ceiling is two-sided. The bands are symmetric about even chance, so the ceiling limits how
+far from "roughly even chance" a term may sit, in either direction: where the ceiling is "very
+likely" the floor is "very unlikely", and at trust 2 only "roughly even chance" is allowed.
+"Almost no chance X is involved" on one forum post claims as much as "almost certain X is
+involved", and blocks the same way, in a finding's `likelihood:` and in the prose.
+
+**Confirming sources.** Trust 4 or 5 needs at least two confirming sources. With a `sources:`
+block they are counted by independent root. Without one the ids in `confirmed_by` are counted as
+claimed (distinct, non-empty), independence is reported NOT CHECKED, and `--require-sources`
+turns that into a block.
+
 **Finding strength** (reported, not gated) = type base (CONFIRMED 8, PRIMARY 7,
 DERIVED 4, ANECDOTAL 2, CONTESTED 0) + 0.4 × trust + 0.5 per confirmation, with the
 confirmation bonus capped at 1.5 and the total at 10. CONTESTED is always 0: a

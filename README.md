@@ -48,8 +48,8 @@ incident-report-before.md: BLOCKED  (5W1H 2/6, 1 graded finding(s), 1 conflict(s
 (exit 1)
 $ cti-report-lint check incident-report-after.md
 incident-report-after.md: PASS  (5W1H 6/6, 2 graded finding(s), 1 conflict(s))
-  finding[0] PRIMARY strength 9.6 likelihood 'very likely'
-  finding[1] DERIVED strength 5.7 likelihood 'likely'
+  finding[0] PRIMARY strength 9.6 likelihood 'very likely', 2 independent source(s)
+  finding[1] DERIVED strength 5.7 likelihood 'likely', 1 independent source(s)
 (exit 0)
 ```
 
@@ -72,7 +72,7 @@ Plain prose gets the wording and 5W1H checks. Evidence goes in YAML frontmatter 
 
 A report is blocked if any of six checks fails: judgment wording, 5W1H coverage, finding grades, likelihood ceiling, open conflicts, and identifiers (CVE and ATT&CK ids).
 
-The ceiling: trust 5 may say "almost certain", 4 "very likely", 3 "likely", 2 "roughly even chance". Trust 1 or a CONTESTED finding permits no single judgment.
+The ceiling: trust 5 may say "almost certain", 4 "very likely", 3 "likely", 2 "roughly even chance". It holds in both directions: where "very likely" is the most a finding allows, "very unlikely" is too. Trust 1 or a CONTESTED finding permits no single judgment. Trust 4 or 5 needs two confirming sources.
 
 The full table, the bands, the strength formula and the conflict severity rule: [docs/rules.md](docs/rules.md).
 

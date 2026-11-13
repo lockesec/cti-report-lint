@@ -30,7 +30,7 @@ The tracked actor (who) almost certainly deployed a ransomware payload (what) fi
 PASSING = """---
 date: 2026-09-01
 findings:
-  - {finding_type: PRIMARY, trust_score: 5, source_reliability: A, confirmed_by: []}
+  - {finding_type: PRIMARY, trust_score: 5, source_reliability: A, confirmed_by: [EDR telemetry, vendor advisory]}
 ---
 The tracked actor (who) deployed a ransomware payload (what) first seen
 2026-02 (when) against the finance sector (where) for financial motivation
